@@ -42,7 +42,6 @@ class OrderRecord {
   });
 }
 
-// Global App State for Fast Demo
 class CoopStoreState extends ChangeNotifier {
   String currentUserName = 'Ahmad Zaki (AI220145)';
   String currentUserEmail = 'ai220145@student.uthm.edu.my';
