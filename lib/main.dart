@@ -21,7 +21,7 @@ class CoopUthmApp extends StatelessWidget {
             useMaterial3: true,
             colorSchemeSeed: const Color(0xFF0D47A1),
             brightness: Brightness.light,
-          ),
+          ),  
           home: const LoginPage(),
         );
       },
