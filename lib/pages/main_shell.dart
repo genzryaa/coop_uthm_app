@@ -51,7 +51,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
           const NavigationDestination(
             icon: Icon(Icons.receipt_long_outlined),
             selectedIcon: Icon(Icons.receipt_long),
-            label: 'Orders',
+            label: 'Profile',
           ),
         ],
       ),
