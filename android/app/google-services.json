@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "563726711109",
+    "project_id": "coop-uthm-app",
+    "storage_bucket": "coop-uthm-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:563726711109:android:05794cb5c0a9dead43a62c",
+        "android_client_info": {
+          "package_name": "com.example.coop_uthm_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBXEmslrsahfgaSJydXFi5KhCuznY0zsi4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
