@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'register_page.dart';
 import 'main_shell.dart';
+import 'admin_shell.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -43,7 +44,7 @@ class _LoginPageState extends State<LoginPage> {
                 TextField(
                   controller: _emailCtrl,
                   decoration: const InputDecoration(
-                    labelText: 'UTHM Email / Matric ID',
+                    labelText: 'UTHM Email / Staff ID',
                     prefixIcon: Icon(Icons.email_outlined),
                     border: OutlineInputBorder(),
                   ),
@@ -68,11 +69,30 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     );
                   },
-                  icon: const Icon(Icons.login),
+                  icon: const Icon(Icons.shopping_bag_outlined),
                   label: const Padding(
                     padding: EdgeInsets.symmetric(vertical: 14),
                     child: Text(
                       'Sign In as Student Buyer',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                FilledButton.tonalIcon(
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AdminNavigationShell(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.admin_panel_settings_outlined),
+                  label: const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    child: Text(
+                      'Sign In as COOP Staff / Admin',
                       style: TextStyle(fontSize: 16),
                     ),
                   ),
