@@ -88,9 +88,8 @@ class CartCheckoutPage extends StatelessWidget {
                         ? null
                         : () async {
                             setModalState(() => isProcessing = true);
-                            await Future.delayed(const Duration(seconds: 1));
                             final receipt =
-                                coopState.completeStripeMockCheckout();
+                                await coopState.completeStripeMockCheckout();
                             if (context.mounted) {
                               Navigator.pop(ctx);
                               showDialog(
@@ -105,7 +104,7 @@ class CartCheckoutPage extends StatelessWidget {
                                   content: Text(
                                     'Order ID: ${receipt.orderId}\n'
                                     'Paid: RM ${receipt.total.toStringAsFixed(2)}\n'
-                                    'Status: Ready for Coop Pickup',
+                                    'Status: Saved to Cloud & Ready for Pickup',
                                     textAlign: TextAlign.center,
                                   ),
                                   actions: [

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../data/coop_data.dart';
 import 'login_page.dart';
 
@@ -13,11 +14,14 @@ class ProfileOrdersPage extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginPage()),
-              );
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+              if (context.mounted) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                );
+              }
             },
           ),
         ],
@@ -48,7 +52,9 @@ class ProfileOrdersPage extends StatelessWidget {
                 subtitle: Text(
                   '${order.itemCount} items • ${order.paymentMethod}',
                 ),
-                trailing: const Chip(label: Text('PAID')),
+                trailing: Chip(
+                  label: Text(order.isPickedUp ? 'PICKED UP' : 'PAID'),
+                ),
               ),
             ),
           ),

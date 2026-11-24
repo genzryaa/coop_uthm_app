@@ -65,12 +65,13 @@ class AdminInventoryPage extends StatelessWidget {
               child: const Text('Cancel'),
             ),
             FilledButton(
-              onPressed: () {
+              onPressed: () async {
                 final price = double.tryParse(priceCtrl.text) ?? 0.0;
                 final stock = int.tryParse(stockCtrl.text) ?? 10;
                 if (nameCtrl.text.isNotEmpty && price > 0) {
-                  coopState.addNewProduct(nameCtrl.text, selectedCat, price, stock);
-                  Navigator.pop(ctx);
+                  await coopState.addNewProduct(
+                      nameCtrl.text, selectedCat, price, stock);
+                  if (ctx.mounted) Navigator.pop(ctx);
                 }
               },
               child: const Text('Add Product'),
@@ -116,7 +117,8 @@ class AdminInventoryPage extends StatelessWidget {
               children: [
                 IconButton(
                   tooltip: 'Restock +10',
-                  icon: const Icon(Icons.add_circle_outline, color: Colors.green),
+                  icon:
+                      const Icon(Icons.add_circle_outline, color: Colors.green),
                   onPressed: () => coopState.restockProduct(item, 10),
                 ),
                 IconButton(

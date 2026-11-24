@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Product {
   final String id;
@@ -18,6 +19,53 @@ class Product {
     required this.icon,
     required this.color,
   });
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'name': name,
+        'category': category,
+        'price': price,
+        'stock': stock,
+      };
+
+  factory Product.fromMap(Map<String, dynamic> map) {
+    final cat = map['category'] ?? 'Snacks';
+    return Product(
+      id: map['id'] ?? '',
+      name: map['name'] ?? '',
+      category: cat,
+      price: (map['price'] ?? 0).toDouble(),
+      stock: (map['stock'] ?? 0).toInt(),
+      icon: _iconForCategory(cat),
+      color: _colorForCategory(cat),
+    );
+  }
+
+  static IconData _iconForCategory(String cat) {
+    switch (cat) {
+      case 'Beverages':
+        return Icons.local_drink;
+      case 'Stationery':
+        return Icons.edit;
+      case 'Essentials':
+        return Icons.shopping_bag;
+      default:
+        return Icons.fastfood;
+    }
+  }
+
+  static Color _colorForCategory(String cat) {
+    switch (cat) {
+      case 'Beverages':
+        return Colors.blue;
+      case 'Stationery':
+        return Colors.indigo;
+      case 'Essentials':
+        return Colors.teal;
+      default:
+        return Colors.orange;
+    }
+  }
 }
 
 class CartItem {
@@ -44,6 +92,26 @@ class OrderRecord {
     required this.paymentMethod,
     this.isPickedUp = false,
   });
+
+  Map<String, dynamic> toMap() => {
+        'orderId': orderId,
+        'buyerName': buyerName,
+        'date': date.toIso8601String(),
+        'total': total,
+        'itemCount': itemCount,
+        'paymentMethod': paymentMethod,
+        'isPickedUp': isPickedUp,
+      };
+
+  factory OrderRecord.fromMap(Map<String, dynamic> map) => OrderRecord(
+        orderId: map['orderId'] ?? '',
+        buyerName: map['buyerName'] ?? '',
+        date: DateTime.tryParse(map['date'] ?? '') ?? DateTime.now(),
+        total: (map['total'] ?? 0).toDouble(),
+        itemCount: (map['itemCount'] ?? 0).toInt(),
+        paymentMethod: map['paymentMethod'] ?? 'Stripe Sandbox',
+        isPickedUp: map['isPickedUp'] ?? false,
+      );
 }
 
 class ExpenseRecord {
@@ -58,11 +126,27 @@ class ExpenseRecord {
     required this.amount,
     required this.date,
   });
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'title': title,
+        'amount': amount,
+        'date': date.toIso8601String(),
+      };
+
+  factory ExpenseRecord.fromMap(Map<String, dynamic> map) => ExpenseRecord(
+        id: map['id'] ?? '',
+        title: map['title'] ?? '',
+        amount: (map['amount'] ?? 0).toDouble(),
+        date: DateTime.tryParse(map['date'] ?? '') ?? DateTime.now(),
+      );
 }
 
 class CoopStoreState extends ChangeNotifier {
-  String currentUserName = 'Ahmad Zaki (AI220145)';
-  String currentUserEmail = 'ai220145@student.uthm.edu.my';
+  final _db = FirebaseFirestore.instance;
+
+  String currentUserName = 'Student Buyer';
+  String currentUserEmail = '';
 
   final List<String> categories = [
     'All',
@@ -72,13 +156,18 @@ class CoopStoreState extends ChangeNotifier {
     'Essentials',
   ];
 
-  // 40 COOP UTHM Retail Items (10 per category, strictly retail store)
-  final List<Product> products = [
+  List<Product> products = [];
+  final List<CartItem> cart = [];
+  List<OrderRecord> orders = [];
+  List<ExpenseRecord> expenses = [];
+
+  // 40 Initial COOP UTHM Retail Items (10 per category, strictly retail store)
+  final List<Product> _default40Products = [
     // 1. SNACKS (10 Items)
     Product(id: 'SN01', name: 'Mister Potato Original 75g', category: 'Snacks', price: 3.50, stock: 24, icon: Icons.fastfood, color: Colors.orange),
     Product(id: 'SN02', name: 'Twisties BBQ Curry 60g', category: 'Snacks', price: 2.20, stock: 30, icon: Icons.fastfood, color: Colors.deepOrange),
     Product(id: 'SN03', name: 'Oreo Vanilla Cream Pack', category: 'Snacks', price: 3.80, stock: 18, icon: Icons.cookie, color: Colors.indigo),
-    Product(id: 'SN04', name: 'Hup Seng Cream Crackers', category: 'Snacks', price: 4.50, stock: 4, icon: Icons.bakery_dining, color: Colors.amber), // Low stock sample
+    Product(id: 'SN04', name: 'Hup Seng Cream Crackers', category: 'Snacks', price: 4.50, stock: 4, icon: Icons.bakery_dining, color: Colors.amber),
     Product(id: 'SN05', name: 'LexUS Chocolate Sandwich', category: 'Snacks', price: 4.20, stock: 20, icon: Icons.cookie, color: Colors.brown),
     Product(id: 'SN06', name: 'Maggi Hot Cup Kari', category: 'Snacks', price: 2.50, stock: 40, icon: Icons.ramen_dining, color: Colors.red),
     Product(id: 'SN07', name: 'Maggi Hot Cup Tom Yam', category: 'Snacks', price: 2.50, stock: 35, icon: Icons.ramen_dining, color: Colors.redAccent),
@@ -94,7 +183,7 @@ class CoopStoreState extends ChangeNotifier {
     Product(id: 'BV05', name: 'Dutch Lady Full Cream 200ml', category: 'Beverages', price: 2.50, stock: 25, icon: Icons.local_drink, color: Colors.blueAccent),
     Product(id: 'BV06', name: 'Nescafe Original Can 240ml', category: 'Beverages', price: 2.80, stock: 32, icon: Icons.coffee, color: Colors.brown),
     Product(id: 'BV07', name: 'Yeos Chrysanthemum Tea 250ml', category: 'Beverages', price: 1.60, stock: 36, icon: Icons.emoji_food_beverage, color: Colors.amber),
-    Product(id: 'BV08', name: 'Ribena Blackcurrant Packet', category: 'Beverages', price: 2.40, stock: 3, icon: Icons.local_drink, color: Colors.deepPurple), // Low stock sample
+    Product(id: 'BV08', name: 'Ribena Blackcurrant Packet', category: 'Beverages', price: 2.40, stock: 3, icon: Icons.local_drink, color: Colors.deepPurple),
     Product(id: 'BV09', name: 'Revive Isotonic Bottle 500ml', category: 'Beverages', price: 3.00, stock: 28, icon: Icons.local_drink, color: Colors.cyan),
     Product(id: 'BV10', name: 'Wonda Kopi Tarik Can 240ml', category: 'Beverages', price: 2.90, stock: 19, icon: Icons.coffee, color: Colors.orange),
 
@@ -108,7 +197,7 @@ class CoopStoreState extends ChangeNotifier {
     Product(id: 'ST07', name: 'Faber-Castell Dust-Free Eraser', category: 'Stationery', price: 1.20, stock: 60, icon: Icons.cleaning_services, color: Colors.grey),
     Product(id: 'ST08', name: 'Liquid Correction Tape 5mm', category: 'Stationery', price: 3.20, stock: 25, icon: Icons.format_paint, color: Colors.lightBlue),
     Product(id: 'ST09', name: 'Clear Plastic L-Folder A4', category: 'Stationery', price: 1.00, stock: 90, icon: Icons.folder_open, color: Colors.teal),
-    Product(id: 'ST10', name: 'Mini Stapler + Box Staples', category: 'Stationery', price: 5.50, stock: 5, icon: Icons.attach_file, color: Colors.red), // Low stock sample
+    Product(id: 'ST10', name: 'Mini Stapler + Box Staples', category: 'Stationery', price: 5.50, stock: 5, icon: Icons.attach_file, color: Colors.red),
 
     // 4. DAILY ESSENTIALS (10 Items)
     Product(id: 'ES01', name: 'Premier Pocket Tissue (4 Packs)', category: 'Essentials', price: 2.80, stock: 42, icon: Icons.layers, color: Colors.blue),
@@ -123,40 +212,43 @@ class CoopStoreState extends ChangeNotifier {
     Product(id: 'ES10', name: 'Foldable Campus Umbrella', category: 'Essentials', price: 14.90, stock: 12, icon: Icons.umbrella, color: Colors.deepPurple),
   ];
 
-  final List<CartItem> cart = [];
+  // Auto-seed 40 items if Firestore is empty & listen to live cloud updates
+  Future<void> initFirestoreData() async {
+    final prodSnap = await _db.collection('products').get();
+    if (prodSnap.docs.isEmpty) {
+      for (final p in _default40Products) {
+        await _db.collection('products').doc(p.id).set(p.toMap());
+      }
+    }
 
-  final List<OrderRecord> orders = [
-    OrderRecord(
-      orderId: 'COOP-8841',
-      buyerName: 'Nurul Aina (AI220098)',
-      date: DateTime.now().subtract(const Duration(days: 1)),
-      total: 48.50,
-      itemCount: 12,
-      paymentMethod: 'Stripe Sandbox (•••• 4242)',
-      isPickedUp: true,
-    ),
-    OrderRecord(
-      orderId: 'COOP-8842',
-      buyerName: 'Hafiz Rahman (CI230041)',
-      date: DateTime.now().subtract(const Duration(hours: 3)),
-      total: 24.00,
-      itemCount: 6,
-      paymentMethod: 'Stripe Sandbox (•••• 4242)',
-      isPickedUp: false,
-    ),
-  ];
+    _db.collection('products').snapshots().listen((snap) {
+      products = snap.docs.map((d) => Product.fromMap(d.data())).toList();
+      notifyListeners();
+    });
 
-  final List<ExpenseRecord> expenses = [
-    ExpenseRecord(id: 'EXP-01', title: 'Supplier Restock: Beverages & Snacks', amount: 35.00, date: DateTime.now().subtract(const Duration(days: 2))),
-    ExpenseRecord(id: 'EXP-02', title: 'Receipt Paper & Packaging Bags', amount: 12.50, date: DateTime.now().subtract(const Duration(days: 1))),
-  ];
+    _db
+        .collection('orders')
+        .orderBy('date', descending: true)
+        .snapshots()
+        .listen((snap) {
+      orders = snap.docs.map((d) => OrderRecord.fromMap(d.data())).toList();
+      notifyListeners();
+    });
 
-  // Buyer Cart Helpers
+    _db
+        .collection('expenses')
+        .orderBy('date', descending: true)
+        .snapshots()
+        .listen((snap) {
+      expenses = snap.docs.map((d) => ExpenseRecord.fromMap(d.data())).toList();
+      notifyListeners();
+    });
+  }
+
   int get totalCartCount => cart.fold(0, (sum, item) => sum + item.quantity);
   double get totalCartAmount =>
       cart.fold(0.0, (sum, item) => sum + (item.product.price * item.quantity));
 
-  // Admin Financial Helpers
   double get totalRevenue =>
       orders.fold(0.0, (sum, order) => sum + order.total);
   double get totalExpenses =>
@@ -186,14 +278,18 @@ class CoopStoreState extends ChangeNotifier {
     }
   }
 
-  OrderRecord completeStripeMockCheckout() {
+  Future<OrderRecord> completeStripeMockCheckout() async {
     for (var item in cart) {
-      if (item.product.stock >= item.quantity) {
-        item.product.stock -= item.quantity;
-      }
+      final newStock = (item.product.stock - item.quantity).clamp(0, 9999);
+      await _db
+          .collection('products')
+          .doc(item.product.id)
+          .update({'stock': newStock});
     }
+
+    final orderId = 'COOP-${1000 + DateTime.now().millisecond * 8}';
     final newOrder = OrderRecord(
-      orderId: 'COOP-${1000 + DateTime.now().millisecond * 8}',
+      orderId: orderId,
       buyerName: currentUserName,
       date: DateTime.now(),
       total: totalCartAmount,
@@ -201,55 +297,55 @@ class CoopStoreState extends ChangeNotifier {
       paymentMethod: 'Stripe Sandbox (•••• 4242)',
       isPickedUp: false,
     );
-    orders.insert(0, newOrder);
+
+    await _db.collection('orders').doc(orderId).set(newOrder.toMap());
     cart.clear();
     notifyListeners();
     return newOrder;
   }
 
-  // Admin Actions
-  void restockProduct(Product product, int addQty) {
-    product.stock += addQty;
-    notifyListeners();
+  Future<void> restockProduct(Product product, int addQty) async {
+    await _db
+        .collection('products')
+        .doc(product.id)
+        .update({'stock': product.stock + addQty});
   }
 
-  void addNewProduct(String name, String category, double price, int stock) {
-    products.insert(
-      0,
-      Product(
-        id: 'NEW-${products.length + 1}',
-        name: name,
-        category: category,
-        price: price,
-        stock: stock,
-        icon: Icons.inventory_2,
-        color: Colors.blueAccent,
-      ),
+  Future<void> addNewProduct(
+      String name, String category, double price, int stock) async {
+    final id = 'SKU-${DateTime.now().millisecondsSinceEpoch}';
+    final p = Product(
+      id: id,
+      name: name,
+      category: category,
+      price: price,
+      stock: stock,
+      icon: Product._iconForCategory(category),
+      color: Product._colorForCategory(category),
     );
-    notifyListeners();
+    await _db.collection('products').doc(id).set(p.toMap());
   }
 
-  void deleteProduct(Product product) {
-    products.remove(product);
-    notifyListeners();
+  Future<void> deleteProduct(Product product) async {
+    await _db.collection('products').doc(product.id).delete();
   }
 
-  void addExpense(String title, double amount) {
-    expenses.insert(
-      0,
-      ExpenseRecord(
-        id: 'EXP-${expenses.length + 1}',
-        title: title,
-        amount: amount,
-        date: DateTime.now(),
-      ),
+  Future<void> addExpense(String title, double amount) async {
+    final id = 'EXP-${DateTime.now().millisecondsSinceEpoch}';
+    final exp = ExpenseRecord(
+      id: id,
+      title: title,
+      amount: amount,
+      date: DateTime.now(),
     );
-    notifyListeners();
+    await _db.collection('expenses').doc(id).set(exp.toMap());
   }
 
-  void toggleOrderPickup(OrderRecord order) {
-    order.isPickedUp = !order.isPickedUp;
-    notifyListeners();
+  Future<void> toggleOrderPickup(OrderRecord order) async {
+    await _db
+        .collection('orders')
+        .doc(order.orderId)
+        .update({'isPickedUp': !order.isPickedUp});
   }
 }
 

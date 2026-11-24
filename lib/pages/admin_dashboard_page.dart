@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../data/coop_data.dart';
 import 'login_page.dart';
 
@@ -40,11 +41,11 @@ class AdminDashboardPage extends StatelessWidget {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () {
+            onPressed: () async {
               final amt = double.tryParse(amountCtrl.text) ?? 0.0;
               if (titleCtrl.text.isNotEmpty && amt > 0) {
-                coopState.addExpense(titleCtrl.text, amt);
-                Navigator.pop(ctx);
+                await coopState.addExpense(titleCtrl.text, amt);
+                if (ctx.mounted) Navigator.pop(ctx);
               }
             },
             child: const Text('Save Expense'),
@@ -63,13 +64,16 @@ class AdminDashboardPage extends StatelessWidget {
         title: const Text('COOP Staff Financial Dashboard'),
         actions: [
           IconButton(
-            tooltip: 'Switch Role / Logout',
+            tooltip: 'Logout',
             icon: const Icon(Icons.logout),
-            onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginPage()),
-              );
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+              if (context.mounted) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                );
+              }
             },
           ),
         ],
@@ -82,7 +86,6 @@ class AdminDashboardPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Profit/Loss Summary Cards
           Row(
             children: [
               Expanded(
@@ -112,15 +115,14 @@ class AdminDashboardPage extends StatelessWidget {
             icon: Icons.account_balance_wallet,
           ),
           const SizedBox(height: 20),
-
-          // Low Stock Alert Section
           Row(
             children: [
               const Icon(Icons.warning_amber_rounded, color: Colors.red),
               const SizedBox(width: 6),
               Text(
                 'Low-Stock Alerts (${coopState.lowStockProducts.length} items ≤ 5)',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -136,7 +138,8 @@ class AdminDashboardPage extends StatelessWidget {
                 child: ListTile(
                   leading: Icon(item.icon, color: Colors.red),
                   title: Text(item.name),
-                  subtitle: Text('Category: ${item.category} • Only ${item.stock} left'),
+                  subtitle: Text(
+                      'Category: ${item.category} • Only ${item.stock} left'),
                   trailing: FilledButton.tonal(
                     onPressed: () => coopState.restockProduct(item, 20),
                     child: const Text('+20 Stock'),
@@ -145,8 +148,6 @@ class AdminDashboardPage extends StatelessWidget {
               ),
             ),
           const SizedBox(height: 20),
-
-          // Recent Operational Expenses
           const Text(
             'Operational Expenses Log',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -203,7 +204,8 @@ class _MetricCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  Text(title,
+                      style: const TextStyle(fontSize: 12, color: Colors.grey)),
                   Text(
                     value,
                     style: TextStyle(
