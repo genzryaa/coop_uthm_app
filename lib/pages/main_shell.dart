@@ -49,7 +49,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
             label: 'Cart',
           ),
           const NavigationDestination(
-            icon: Icon(Icons.person_outlined),
+            icon: Icon(Icons.person_outline),
             selectedIcon: Icon(Icons.person),
             label: 'Profile',
           ),

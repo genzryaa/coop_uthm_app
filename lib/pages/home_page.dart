@@ -11,72 +11,92 @@ class BuyerHomePage extends StatefulWidget {
 
 class _BuyerHomePageState extends State<BuyerHomePage> {
   String _selectedCategory = 'All';
+  final List<String> _categories = [
+    'All',
+    'Snacks',
+    'Beverages',
+    'Stationery',
+    'Essentials',
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final filteredProducts = _selectedCategory == 'All'
-        ? coopState.products
-        : coopState.products
-            .where((p) => p.category == _selectedCategory)
-            .toList();
+    return ListenableBuilder(
+      listenable: coopState,
+      builder: (context, _) {
+        final products = _selectedCategory == 'All'
+            ? coopState.products
+            : coopState.products
+                .where((p) => p.category == _selectedCategory)
+                .toList();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'COOP UTHM Retail',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            Text(
-              '${coopState.products.length} Retail Items • 4 Categories',
-              style: const TextStyle(fontSize: 12),
-            ),
-          ],
-        ),
-      ),
-      body: Column(
-        children: [
-          SizedBox(
-            height: 54,
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              scrollDirection: Axis.horizontal,
-              itemCount: coopState.categories.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                final cat = coopState.categories[index];
-                final count = cat == 'All'
-                    ? coopState.products.length
-                    : coopState.products
-                        .where((p) => p.category == cat)
-                        .length;
-                return ChoiceChip(
-                  label: Text('$cat ($count)'),
-                  selected: _selectedCategory == cat,
-                  onSelected: (_) => setState(() => _selectedCategory = cat),
-                );
-              },
+        return Scaffold(
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            title: Row(
+              children: [
+                Image.asset(
+                  'assets/images/coop_uthm_logo.png',
+                  height: 36,
+                  fit: BoxFit.contain,
+                ),
+                const SizedBox(width: 10),
+                const Text(
+                  'Retail Store',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
             ),
           ),
-          Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.all(12),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.78,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
+          body: Column(
+            children: [
+              SizedBox(
+                height: 54,
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _categories.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, idx) {
+                    final cat = _categories[idx];
+                    final isSelected = cat == _selectedCategory;
+                    return ChoiceChip(
+                      label: Text(cat),
+                      selected: isSelected,
+                      onSelected: (_) =>
+                          setState(() => _selectedCategory = cat),
+                    );
+                  },
+                ),
               ),
-              itemCount: filteredProducts.length,
-              itemBuilder: (context, index) {
-                return ProductCard(product: filteredProducts[index]);
-              },
-            ),
+              Expanded(
+                child: products.isEmpty
+                    ? const Center(child: Text('Loading COOP UTHM products...'))
+                    : GridView.builder(
+                        padding: const EdgeInsets.all(16),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 0.74,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                        ),
+                        itemCount: products.length,
+                        itemBuilder: (context, idx) =>
+                            ProductCard(product: products[idx]),
+                      ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
