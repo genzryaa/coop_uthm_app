@@ -28,7 +28,7 @@ class AdminInventoryPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: selectedCat,
+                  initialValue: selectedCat,
                   decoration: const InputDecoration(
                     labelText: 'Retail Category',
                     border: OutlineInputBorder(),
@@ -101,7 +101,7 @@ class AdminInventoryPage extends StatelessWidget {
           final isLow = item.stock <= 5;
           return ListTile(
             leading: CircleAvatar(
-              backgroundColor: item.color.withOpacity(0.15),
+              backgroundColor: item.color.withValues(alpha: 0.15),
               child: Icon(item.icon, color: item.color),
             ),
             title: Text(item.name),

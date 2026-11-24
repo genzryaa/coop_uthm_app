@@ -163,7 +163,7 @@ class CartCheckoutPage extends StatelessWidget {
                       final item = coopState.cart[index];
                       return ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: item.product.color.withOpacity(0.15),
+                          backgroundColor: item.product.color.withValues(alpha: 0.15),
                           child: Icon(
                             item.product.icon,
                             color: item.product.color,

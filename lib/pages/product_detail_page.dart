@@ -17,7 +17,7 @@ class ProductDetailPage extends StatelessWidget {
             Container(
               height: 220,
               decoration: BoxDecoration(
-                color: product.color.withOpacity(0.12),
+                color: product.color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(product.icon, size: 110, color: product.color),
