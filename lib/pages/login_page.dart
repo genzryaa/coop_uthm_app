@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../data/coop_data.dart';
 import 'register_page.dart';
 import 'main_shell.dart';
 import 'admin_shell.dart';
@@ -11,8 +14,56 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _emailCtrl = TextEditingController(text: 'ai220145@student.uthm.edu.my');
-  final _passCtrl = TextEditingController(text: '••••••••');
+  final _emailCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
+  bool _isLoading = false;
+
+  Future<void> _signIn() async {
+    if (_emailCtrl.text.isEmpty || _passCtrl.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter both email and password.')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailCtrl.text.trim(),
+        password: _passCtrl.text.trim(),
+      );
+
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(cred.user!.uid)
+          .get();
+
+      final data = userDoc.data();
+      coopState.currentUserName =
+          data?['name'] ?? _emailCtrl.text.trim().split('@').first;
+      coopState.currentUserEmail = _emailCtrl.text.trim();
+      final role = data?['role'] ?? 'buyer';
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => role == 'staff'
+                ? const AdminNavigationShell()
+                : const MainNavigationShell(),
+          ),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message ?? 'Invalid email or password')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,8 +94,9 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 32),
                 TextField(
                   controller: _emailCtrl,
+                  keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(
-                    labelText: 'UTHM Email / Staff ID',
+                    labelText: 'UTHM Email',
                     prefixIcon: Icon(Icons.email_outlined),
                     border: OutlineInputBorder(),
                   ),
@@ -61,40 +113,13 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 24),
                 FilledButton.icon(
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const MainNavigationShell(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.shopping_bag_outlined),
-                  label: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 14),
-                    child: Text(
-                      'Sign In as Student Buyer',
-                      style: TextStyle(fontSize: 16),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                FilledButton.tonalIcon(
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const AdminNavigationShell(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.admin_panel_settings_outlined),
-                  label: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 14),
-                    child: Text(
-                      'Sign In as COOP Staff / Admin',
-                      style: TextStyle(fontSize: 16),
-                    ),
+                  onPressed: _isLoading ? null : _signIn,
+                  icon: const Icon(Icons.login),
+                  label: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text('Sign In', style: TextStyle(fontSize: 16)),
                   ),
                 ),
                 const SizedBox(height: 12),

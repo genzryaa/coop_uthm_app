@@ -22,16 +22,16 @@ class _BuyerHomePageState extends State<BuyerHomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Column(
+        title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'COOP UTHM Retail',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             Text(
-              '40 Retail Items • 4 Categories',
-              style: TextStyle(fontSize: 12),
+              '${coopState.products.length} Retail Items • 4 Categories',
+              style: const TextStyle(fontSize: 12),
             ),
           ],
         ),
