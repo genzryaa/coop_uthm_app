@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/coop_data.dart';
 import 'home_page.dart';
-import 'search_page.dart';
+import 'order_history_page.dart';
 import 'cart_page.dart';
 import 'profile_page.dart';
 
@@ -19,42 +19,49 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
   Widget build(BuildContext context) {
     final pages = [
       const BuyerHomePage(),
-      const SearchFilterPage(),
+      const OrderHistoryPage(),
       const CartCheckoutPage(),
-      const ProfileOrdersPage(),
+      const UserProfilePage(isAdmin: false),
     ];
 
-    return Scaffold(
-      body: pages[_selectedIndex],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (idx) => setState(() => _selectedIndex = idx),
-        destinations: [
-          const NavigationDestination(
-            icon: Icon(Icons.store_outlined),
-            selectedIcon: Icon(Icons.store),
-            label: 'Catalog',
+    return ListenableBuilder(
+      listenable: coopState,
+      builder: (context, _) {
+        return Scaffold(
+          body: pages[_selectedIndex],
+          bottomNavigationBar: NavigationBar(
+            selectedIndex: _selectedIndex,
+            onDestinationSelected: (idx) =>
+                setState(() => _selectedIndex = idx),
+            destinations: [
+              NavigationDestination(
+                icon: const Icon(Icons.store_outlined),
+                selectedIcon: const Icon(Icons.store),
+                label: coopState.tr('catalog'),
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.receipt_long_outlined),
+                selectedIcon: const Icon(Icons.receipt_long),
+                label: coopState.tr('orders'),
+              ),
+              NavigationDestination(
+                icon: Badge(
+                  isLabelVisible: coopState.totalCartCount > 0,
+                  label: Text('${coopState.totalCartCount}'),
+                  child: const Icon(Icons.shopping_cart_outlined),
+                ),
+                selectedIcon: const Icon(Icons.shopping_cart),
+                label: coopState.tr('cart'),
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.person_outline),
+                selectedIcon: const Icon(Icons.person),
+                label: coopState.tr('profile'),
+              ),
+            ],
           ),
-          const NavigationDestination(
-            icon: Icon(Icons.search),
-            label: 'Search',
-          ),
-          NavigationDestination(
-            icon: Badge(
-              isLabelVisible: coopState.totalCartCount > 0,
-              label: Text('${coopState.totalCartCount}'),
-              child: const Icon(Icons.shopping_cart_outlined),
-            ),
-            selectedIcon: const Icon(Icons.shopping_cart),
-            label: 'Cart',
-          ),
-          const NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

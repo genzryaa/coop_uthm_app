@@ -1,220 +1,334 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../data/coop_data.dart';
-import 'login_page.dart';
 
-class AdminDashboardPage extends StatelessWidget {
+class AdminDashboardPage extends StatefulWidget {
   const AdminDashboardPage({super.key});
 
-  void _showAddExpenseDialog(BuildContext context) {
-    final titleCtrl = TextEditingController();
-    final amountCtrl = TextEditingController();
+  @override
+  State<AdminDashboardPage> createState() => _AdminDashboardPageState();
+}
 
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Record Store Expense'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Expense Description (e.g. Stock Restock)',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: amountCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Amount (RM)',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final amt = double.tryParse(amountCtrl.text) ?? 0.0;
-              if (titleCtrl.text.isNotEmpty && amt > 0) {
-                await coopState.addExpense(titleCtrl.text, amt);
-                if (ctx.mounted) Navigator.pop(ctx);
-              }
-            },
-            child: const Text('Save Expense'),
-          ),
-        ],
-      ),
-    );
+class _AdminDashboardPageState extends State<AdminDashboardPage> {
+  String _chartRange = 'Day'; // 'Day', 'Week', 'Month'
+  late DateTime _now;
+  Timer? _clockTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _now = DateTime.now();
+    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _now = DateTime.now());
+    });
+  }
+
+  @override
+  void dispose() {
+    _clockTimer?.cancel();
+    super.dispose();
+  }
+
+  String get _formattedDateTime {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    final dayName = days[_now.weekday - 1];
+    final monthName = months[_now.month - 1];
+    final hh = _now.hour.toString().padLeft(2, '0');
+    final mm = _now.minute.toString().padLeft(2, '0');
+    final ss = _now.second.toString().padLeft(2, '0');
+    return '$dayName, ${_now.day} $monthName ${_now.year}  •  $hh:$mm:$ss';
+  }
+
+  List> _buildChartBuckets() {
+    final now = DateTime.now();
+    if (_chartRange == 'Day') {
+      // Last 7 days
+      return List.generate(7, (i) {
+        final target = now.subtract(Duration(days: 6 - i));
+        final total = coopState.orders
+            .where((o) =>
+                o.date.year == target.year &&
+                o.date.month == target.month &&
+                o.date.day == target.day)
+            .fold(0.0, (sum, o) => sum + o.total);
+        return {
+          'label': '${target.day}/${target.month}',
+          'value': total,
+        };
+      });
+    } else if (_chartRange == 'Week') {
+      // Last 4 weeks
+      return List.generate(4, (i) {
+        final weekIndex = 3 - i;
+        final end = now.subtract(Duration(days: weekIndex * 7));
+        final start = end.subtract(const Duration(days: 6));
+        final total = coopState.orders
+            .where((o) =>
+                o.date.isAfter(start.subtract(const Duration(days: 1))) &&
+                o.date.isBefore(end.add(const Duration(days: 1))))
+            .fold(0.0, (sum, o) => sum + o.total);
+        return {
+          'label': 'W${i + 1}',
+          'value': total,
+        };
+      });
+    } else {
+      // Last 6 months
+      const mNames = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      ];
+      return List.generate(6, (i) {
+        final monthOffset = 5 - i;
+        final target = DateTime(now.year, now.month - monthOffset, 1);
+        final total = coopState.orders
+            .where((o) =>
+                o.date.year == target.year && o.date.month == target.month)
+            .fold(0.0, (sum, o) => sum + o.total);
+        return {
+          'label': mNames[target.month - 1],
+          'value': total,
+        };
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final profit = coopState.netProfit;
+    return ListenableBuilder(
+      listenable: coopState,
+      builder: (context, _) {
+        final totalRevenue =
+            coopState.orders.fold(0.0, (sum, o) => sum + o.total);
+        final totalExpenses =
+            coopState.expenses.fold(0.0, (sum, e) => sum + e.amount);
+        final netProfit = totalRevenue - totalExpenses;
+        final lowStockProducts =
+            coopState.products.where((p) => p.stock <= 5).toList();
+        final buckets = _buildChartBuckets();
+        final maxVal = buckets.fold<double>(
+          10.0,
+          (max, b) => (b['value'] as double) > max ? (b['value'] as double) : max,
+        );
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('COOP Staff Financial Dashboard'),
-        actions: [
-          IconButton(
-            tooltip: 'Logout',
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-              if (context.mounted) {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginPage()),
-                );
-              }
-            },
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('COOP Staff Dashboard'),
           ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddExpenseDialog(context),
-        icon: const Icon(Icons.add),
-        label: const Text('Add Expense'),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Row(
+          body: ListView(
+            padding: const EdgeInsets.all(16),
             children: [
-              Expanded(
-                child: _MetricCard(
-                  title: 'Total Revenue',
-                  value: 'RM ${coopState.totalRevenue.toStringAsFixed(2)}',
-                  color: Colors.green,
-                  icon: Icons.trending_up,
+              // Live Date & Time Banner
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE60000).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFFE60000).withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.access_time, color: Color(0xFFE60000)),
+                    const SizedBox(width: 10),
+                    Text(
+                      _formattedDateTime,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _MetricCard(
-                  title: 'Expenses',
-                  value: 'RM ${coopState.totalExpenses.toStringAsFixed(2)}',
-                  color: Colors.orange,
-                  icon: Icons.trending_down,
+              const SizedBox(height: 16),
+              // Financial Summary Cards
+              Row(
+                children: [
+                  Expanded(
+                    child: _StatCard(
+                      title: 'Revenue',
+                      value: 'RM ${totalRevenue.toStringAsFixed(2)}',
+                      color: Colors.green,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _StatCard(
+                      title: 'Expenses',
+                      value: 'RM ${totalExpenses.toStringAsFixed(2)}',
+                      color: Colors.orange,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _StatCard(
+                      title: 'Net Profit',
+                      value: 'RM ${netProfit.toStringAsFixed(2)}',
+                      color: netProfit >= 0 ? Colors.blue : Colors.red,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              // Sales Statistics Graph (Day / Week / Month)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              coopState.tr('sales_stats'),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
+                          SegmentedButton<String>(
+                            showSelectedIcon: false,
+                            segments: [
+                              ButtonSegment(
+                                value: 'Day',
+                                label: Text(coopState.tr('day')),
+                              ),
+                              ButtonSegment(
+                                value: 'Week',
+                                label: Text(coopState.tr('week')),
+                              ),
+                              ButtonSegment(
+                                value: 'Month',
+                                label: Text(coopState.tr('month')),
+                              ),
+                            ],
+                            selected: {_chartRange},
+                            onSelectionChanged: (val) =>
+                                setState(() => _chartRange = val.first),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        height: 170,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: buckets.map((b) {
+                            final val = b['value'] as double;
+                            final barHeight = (val / maxVal) * 115;
+                            return Column(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Text(
+                                  val > 0 ? val.toStringAsFixed(0) : '0',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 300),
+                                  width: 26,
+                                  height: barHeight < 6 ? 6 : barHeight,
+                                  decoration: BoxDecoration(
+                                    color: val > 0
+                                        ? const Color(0xFFE60000)
+                                        : Colors.grey.withValues(alpha: 0.3),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  b['label'],
+                                  style: const TextStyle(fontSize: 11),
+                                ),
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          _MetricCard(
-            title: 'Net Profit / Loss',
-            value: 'RM ${profit.toStringAsFixed(2)}',
-            color: profit >= 0 ? const Color(0xFF0D47A1) : Colors.red,
-            icon: Icons.account_balance_wallet,
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              const Icon(Icons.warning_amber_rounded, color: Colors.red),
-              const SizedBox(width: 6),
+              const SizedBox(height: 18),
+              // Low Stock Alerts
               Text(
-                'Low-Stock Alerts (${coopState.lowStockProducts.length} items ≤ 5)',
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                'Low-Stock Alerts (${lowStockProducts.length})',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
+              const SizedBox(height: 8),
+              if (lowStockProducts.isEmpty)
+                const Card(
+                  child: ListTile(
+                    leading: Icon(Icons.check_circle, color: Colors.green),
+                    title: Text('All 40 COOP retail SKUs are well-stocked.'),
+                  ),
+                )
+              else
+                ...lowStockProducts.map(
+                  (p) => Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.warning_amber, color: Colors.red),
+                      title: Text(p.name),
+                      subtitle: Text('Remaining stock: ${p.stock}'),
+                      trailing: FilledButton(
+                        onPressed: () => coopState.restockProduct(p.id, 20),
+                        child: const Text('+20 Stock'),
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
-          const SizedBox(height: 8),
-          if (coopState.lowStockProducts.isEmpty)
-            const Card(
-              child: ListTile(title: Text('All retail items are well stocked.')),
-            )
-          else
-            ...coopState.lowStockProducts.map(
-              (item) => Card(
-                color: Colors.red.shade50,
-                child: ListTile(
-                  leading: Icon(item.icon, color: Colors.red),
-                  title: Text(item.name),
-                  subtitle: Text(
-                      'Category: ${item.category} • Only ${item.stock} left'),
-                  trailing: FilledButton.tonal(
-                    onPressed: () => coopState.restockProduct(item, 20),
-                    child: const Text('+20 Stock'),
-                  ),
-                ),
-              ),
-            ),
-          const SizedBox(height: 20),
-          const Text(
-            'Operational Expenses Log',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          ...coopState.expenses.map(
-            (exp) => Card(
-              child: ListTile(
-                leading: const CircleAvatar(child: Icon(Icons.receipt)),
-                title: Text(exp.title),
-                trailing: Text(
-                  '- RM ${exp.amount.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    color: Colors.red,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 70),
-        ],
-      ),
+        );
+      },
     );
   }
 }
 
-class _MetricCard extends StatelessWidget {
+class _StatCard extends StatelessWidget {
   final String title;
   final String value;
   final Color color;
-  final IconData icon;
 
-  const _MetricCard({
+  const _StatCard({
     required this.title,
     required this.value,
     required this.color,
-    required this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
-              backgroundColor: color.withValues(alpha: 0.15),
-              child: Icon(icon, color: color),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                  Text(
-                    value,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: color,
-                    ),
-                  ),
-                ],
+            Text(title, style: Theme.of(context).textTheme.bodySmall),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: color,
               ),
             ),
           ],
