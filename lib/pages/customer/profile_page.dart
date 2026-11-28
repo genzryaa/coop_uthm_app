@@ -54,11 +54,11 @@ class _ProfilePageState extends State<ProfilePage> {
           FilledButton(
             onPressed: () async {
               if (_user != null) {
-                await FirebaseFirestore.instance.collection('users').doc(_user!.uid).set({
+                await FirebaseFirestore.instance.collection('users').doc(_user.uid).set({
                   'name': nameController.text.trim(),
                   'matricId': matricController.text.trim(),
                   'phone': phoneController.text.trim(),
-                  'email': _user!.email,
+                  'email': _user.email,
                 }, SetOptions(merge: true));
               }
               if (mounted) {
@@ -99,14 +99,14 @@ class _ProfilePageState extends State<ProfilePage> {
           : StreamBuilder<DocumentSnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('users')
-                  .doc(_user!.uid)
+                  .doc(_user.uid)
                   .snapshots(),
               builder: (context, snapshot) {
                 final data = (snapshot.data?.data() as Map<String, dynamic>?) ?? {};
-                final name = data['name'] ?? _user!.displayName ?? 'UTHM Student';
+                final name = data['name'] ?? _user.displayName ?? 'UTHM Student';
                 final matricId = data['matricId'] ?? 'Not set';
                 final phone = data['phone'] ?? 'Not set';
-                final email = _user!.email ?? '';
+                final email = _user.email ?? '';
 
                 return ListView(
                   padding: const EdgeInsets.all(16),

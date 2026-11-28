@@ -30,7 +30,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
   /// Seeds 10 items per category (40 total items) into Firestore for quick setup & demo
   Future<void> _seedSampleCatalog() async {
-    final Map<String, List>> sampleData = {
+    final sampleData = <String, List>{
       'Stationery & Lab': [
         {'name': 'UTHM Official Lanyard', 'price': 8.00, 'stock': 50},
         {'name': 'UTHM Engineering Lab Coat', 'price': 45.00, 'stock': 30},

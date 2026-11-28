@@ -18,7 +18,7 @@ class _CartPageState extends State<CartPage> {
   String _selectedWallet = 'Touch \'n Go eWallet';
   bool _isProcessing = false;
 
-  final List> _paymentMethods = [
+  final _paymentMethods = [
     {'label': 'Card (Stripe)', 'icon': Icons.credit_card},
     {'label': 'Online Banking (FPX)', 'icon': Icons.account_balance},
     {'label': 'E-Wallet', 'icon': Icons.account_balance_wallet},

@@ -16,7 +16,7 @@ class _CatalogPageState extends State<CatalogPage> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
-  final List> _categories = [
+  final _categories = [
     {'name': 'All', 'labelBm': 'Semua Kategori', 'icon': Icons.apps},
     {'name': 'Stationery & Lab', 'labelBm': 'Alat Tulis & Makmal', 'icon': Icons.science_outlined},
     {'name': 'UTHM Merch', 'labelBm': 'Cenderamata UTHM', 'icon': Icons.checkroom_outlined},
@@ -81,8 +81,8 @@ class _CatalogPageState extends State<CatalogPage> {
       drawer: NavigationDrawer(
         selectedIndex: _categories.indexWhere((c) => c['name'] == _selectedCategory),
         onDestinationSelected: (index) {
-          setState(() => _selectedCategory = _categories[index]['name']);
-          Navigator.pop(context); // Close sidebar
+          setState(() => _selectedCategory = _categories[index]['name'] as String);
+          Navigator.pop(context);
         },
         children: [
           Padding(
@@ -98,7 +98,7 @@ class _CatalogPageState extends State<CatalogPage> {
           ..._categories.map(
             (cat) => NavigationDrawerDestination(
               icon: Icon(cat['icon'] as IconData),
-              label: Text(isBm ? cat['labelBm'] : cat['name']),
+              label: Text((isBm ? cat['labelBm'] : cat['name']) as String),
             ),
           ),
         ],
